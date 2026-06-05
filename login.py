@@ -93,7 +93,7 @@ def load_env_file(path):
     return env
 
 
-credentials = load_env_file(r"c:\Users\peter.chang\Desktop\Scrapy\AccountWebcrawler/credentials.env")
+credentials = load_env_file(r"/run/secrets/credentials.env")
 async def get_cookies_async():
     return await login_and_get_token(
         account  = credentials.get('crm_account',''),

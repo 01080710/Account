@@ -7,6 +7,8 @@ def transformer_df(df: pd.DataFrame ,requestor:str, comparison_time: str ,return
     total_accounts = len(df)
     total_users = df["user_id"].nunique()
     total_users_list  = (df["user_id"].dropna().astype(str).unique().tolist())
+    total_missing = len(df["empty_jobs"].iloc[0])
+    total_missing_list  = df["empty_jobs"].iloc[0]
     countries_covered = (df["countryCode"].dropna().nunique())
     servers_covered = (df["server"].dropna().nunique())
     regulators_covered = (df["regulator"].dropna().nunique())
@@ -17,7 +19,7 @@ def transformer_df(df: pd.DataFrame ,requestor:str, comparison_time: str ,return
     total_equity = (df["equity"].fillna(0).sum()   if "equity" in df.columns else None)
     total_credit = (df["credit"].fillna(0).sum()   if "credit" in df.columns else None)
     estimated_hours_saved = round(total_accounts * manual_seconds_per_account / 3600, 2)
-    estimated_value_twd = round(estimated_hours_saved * hourly_cost, 0)
+    estimated_value_twd   = round(estimated_hours_saved * hourly_cost, 0)
     
     summary_df = pd.DataFrame([{
         # 基本資訊
@@ -25,9 +27,11 @@ def transformer_df(df: pd.DataFrame ,requestor:str, comparison_time: str ,return
         "comparison_time": comparison_time,
 
         # 使用量
-        "total_accounts": total_accounts,
         "total_users": total_users,
         "total_users_list " : total_users_list ,
+        "total_accounts": total_accounts,
+        "total_missing" : total_missing,
+        "total_missing_list" : total_missing_list,
 
         # 覆蓋範圍
         "countries_covered": countries_covered,
@@ -52,4 +56,3 @@ def transformer_df(df: pd.DataFrame ,requestor:str, comparison_time: str ,return
     }])
 
     return summary_df.fillna("").astype(str).values.tolist()
-    # return [summary_df.columns.tolist()] + summary_df.fillna("").astype(str).values.tolist()

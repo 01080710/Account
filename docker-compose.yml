@@ -1,0 +1,26 @@
+version: "3.9"
+
+services:
+  crm-account-pipeline:
+    build: .
+    container_name: crm-account-pipeline
+    environment:
+      DATA_DIR: /data
+      CREDENTIALS_FILE: /run/secrets/credentials.env
+    volumes:
+      - C:/Users/peter.chang/credentials.env:/run/secrets/credentials.env:ro
+      - ./logs:/var/log
+      - ./crontab.txt:/etc/cron.d/my-cron
+    command: >
+      sh -c "touch /var/log/cron.log &&
+             chmod 0644 /etc/cron.d/my-cron &&
+             /usr/bin/crontab /etc/cron.d/my-cron &&
+             /usr/sbin/cron -f"
+    networks:
+      - mynetwork
+    restart: always
+
+networks:
+  mynetwork:
+    driver: bridge
+

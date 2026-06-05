@@ -36,24 +36,8 @@ def generate_month_ranges(
         else:
             end_day_use = last_day
 
-        start_local = datetime(
-            year,
-            month,
-            start_day_use,
-            0,
-            0,
-            0,
-        )
-
-        end_local = datetime(
-            year,
-            month,
-            end_day_use,
-            23,
-            59,
-            59,
-        )
-
+        start_local = datetime(year ,month ,start_day_use ,0 ,0 ,0)
+        end_local   = datetime(year ,month ,end_day_use ,23 ,59 ,59)
         start_utc = start_local - timedelta(hours=8)
         end_utc = end_local - timedelta(hours=8)
 
@@ -96,9 +80,7 @@ async def wait_regulator_switched(
 
     start = asyncio.get_event_loop().time()
     while asyncio.get_event_loop().time() - start < timeout:
-
         try:
-
             async with session.get(
                 "https://admin.vantagemarkets.com/admin/main"
             ) as resp:
@@ -198,12 +180,12 @@ async def post_json_with_retry(
     
 
 async def fetch_one_page(
-    session: aiohttp.ClientSession,
-    job: dict,
-    page_no: int,
-    limit: int,
-    sem: asyncio.Semaphore,
-):
+        session: aiohttp.ClientSession,
+        job: dict,
+        page_no: int,
+        limit: int,
+        sem: asyncio.Semaphore,
+    ):
     async with sem:
         payload_kwargs = job.get("payload_kwargs", {})
 
@@ -235,25 +217,22 @@ async def fetch_one_page(
 async def fetch_job(
     session: aiohttp.ClientSession,
     job: dict,
+    global_sem: asyncio.Semaphore,
+    logger: None
 ):
-    # print(f"目前執行 job：{job['name']}")
+
     limit = job.get("limit", 100)
-    page_concurrency = job.get("page_concurrency", 10)
-
-    sem = asyncio.Semaphore(page_concurrency)
-
     first_page = await fetch_one_page(
         session=session,
         job=job,
         page_no=1,
         limit=limit,
-        sem=sem,
+        sem=global_sem,
     )
 
-    total    = first_page["total"]
+    total = first_page["total"]
     all_rows = first_page["rows"]
-    total_pages = 1 if total == 0 or not all_rows else math.ceil(total / limit)
-    # print(f"{job['name']} 總筆數：{total}，總頁數：{total_pages}")
+    total_pages = (1 if total == 0 or not all_rows  else math.ceil(total / limit))
 
     if total_pages > 1:
         tasks = [
@@ -262,65 +241,142 @@ async def fetch_job(
                 job=job,
                 page_no=page_no,
                 limit=limit,
-                sem=sem,
+                sem=global_sem,
             )
             for page_no in range(2, total_pages + 1)
         ]
 
         results = await asyncio.gather(*tasks)
-        results = sorted(results, key=lambda x: x["page_no"])
+
+        results.sort(
+            key=lambda x: x["page_no"]
+        )
 
         for item in results:
             all_rows.extend(item["rows"])
 
     df = pd.DataFrame(all_rows)
-    # print(f"已成功爬出：{job['name']}，筆數：{len(df)}")
+    
+    if df.empty:
+        pass
+    else:
+        df["brand"] = job["brand"]
+        df["job_name"] = job["job_name"]
 
-    return df
+    return {
+        "df": df,
+        "job": job,
+    }
 
 
 async def run_admin_jobs(
     BRANDS,
     jobs: list[dict],
+    logger=None,
 ):
+    if logger:
+        logger.info(
+            f"Starting admin crawler. "
+            f"brands={BRANDS}, "
+            f"total_jobs={len(jobs)}"
+        )
     cookies = await get_cookies_async()
-
     timeout = aiohttp.ClientTimeout(
         total=60,
         connect=10,
     )
 
     all_results = {}
+
+    # 統計哪些 job 在任一 brand 有資料
+    job_has_data = {
+        job["name"]: False
+        for job in jobs
+    }
+
+    # 全域 request concurrency
+    global_sem = asyncio.Semaphore(20)
     async with aiohttp.ClientSession(
         cookies=cookies,
         timeout=timeout,
     ) as session:
 
         for brand in BRANDS:
-            # print(f"\n===== {brand} =====")
+
+            if logger:
+                logger.info(f"Switching regulator. brand={brand}")
 
             await switch_regulator(session, brand)
 
+            if logger:
+                logger.info(
+                    f"Regulator switched successfully. "
+                    f"brand={brand}"
+                )
+                
             brand_jobs = []
-
             for job in jobs:
                 job_copy = job.copy()
-                job_copy["name"] = f"{brand}_{job['name']}"
+                job_copy["brand"] = brand
+                job_copy["job_name"] = job["name"]
                 brand_jobs.append(job_copy)
 
+            if logger:
+                logger.info(
+                    f"Brand jobs prepared. "
+                    f"brand={brand}, "
+                    f"job_count={len(brand_jobs)}"
+                )
             tasks = [
                 fetch_job(
                     session=session,
                     job=job,
+                    global_sem=global_sem,
+                    logger=logger
                 )
                 for job in brand_jobs
             ]
 
             results = await asyncio.gather(*tasks)
-            all_results[brand] = pd.concat(
-                results,
-                ignore_index=True,
-            )
 
-    # print("全部完成 ✅")
-    return all_results
+            dfs = []
+            total_rows = 0
+            for r in results:
+                df = r["df"]
+                if not df.empty:
+                    dfs.append(df)
+                    total_rows += len(df)
+                    job_has_data[r["job"]["job_name"]] = True
+            if dfs:
+                all_results[brand] = pd.concat(dfs, ignore_index=True,)
+                if logger:
+                    logger.info(
+                        f"Brand execution completed. "
+                        f"brand={brand}, "
+                        f"rows={total_rows}"
+                    )
+            else:
+                all_results[brand] = pd.DataFrame()
+                if logger:
+                    logger.warning(
+                        f"No data returned. "
+                        f"brand={brand}"
+                    )
+
+    empty_jobs = [
+        job_name
+        for job_name, has_data
+        in job_has_data.items()
+        if not has_data
+    ]
+
+    if empty_jobs and logger:
+        logger.warning(
+            f"Jobs returned no data across all brands. "
+            f"empty_jobs={empty_jobs}"
+        )
+
+    return {
+        "data": all_results,
+        "empty_jobs": empty_jobs,
+    }

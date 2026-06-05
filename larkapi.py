@@ -295,7 +295,7 @@ def raise_validation_error(
     row_data = (
         [requestor]
         + [comparison_time]
-        + ["-"] * 15
+        + ["-"] * 17
         + [error_message]
     )
 
@@ -306,4 +306,4 @@ def raise_validation_error(
         row=1
     )
 
-    # raise ValueError(error_message)
+    raise ValueError(error_message)
