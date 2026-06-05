@@ -2,8 +2,8 @@ import pandas as pd
 
 def transformer_df(df: pd.DataFrame ,requestor:str, comparison_time: str ,return_message: str) :
 
-    manual_seconds_per_account = 20 # 假設人工處理一個帳戶平均需要 20 秒
-    hourly_cost = 200 # 假設每小時人力成本 500 元
+    manual_seconds_per_account = 20   # 假設人工處理一個帳戶平均需要 20 秒
+    hourly_cost = 200                 # 假設每小時人力成本 500 元
     total_accounts = len(df)
     total_users = df["user_id"].nunique()
     total_users_list  = (df["user_id"].dropna().astype(str).unique().tolist())
@@ -14,8 +14,8 @@ def transformer_df(df: pd.DataFrame ,requestor:str, comparison_time: str ,return
     earliest_update_time = df["updateTime"].min()
     latest_update_time   = df["updateTime"].max()
     total_balance = (df["balance"].fillna(0).sum() if "balance" in df.columns else None)
-    total_equity = (df["equity"].fillna(0).sum() if "equity" in df.columns else None)
-    total_credit = (df["credit"].fillna(0).sum()  if "credit" in df.columns else None)
+    total_equity = (df["equity"].fillna(0).sum()   if "equity" in df.columns else None)
+    total_credit = (df["credit"].fillna(0).sum()   if "credit" in df.columns else None)
     estimated_hours_saved = round(total_accounts * manual_seconds_per_account / 3600, 2)
     estimated_value_twd = round(estimated_hours_saved * hourly_cost, 0)
     

@@ -105,13 +105,14 @@ async def wait_regulator_switched(
 
                 html = await resp.text()
                 current = get_current_regulator(html)
-                print(f"1. current regulator = {current}")
+                # print(f"1. current regulator = {current}")
 
                 if current and expected_regulator in current:
-                    print(f"2. regulator switched to {current}")
+                    # print(f"2. regulator switched to {current}")
                     return
         except Exception as e:
-            print(f"polling error: {e}")
+            # print(f"polling error: {e}")
+            pass
         await asyncio.sleep(interval)
     raise TimeoutError(
         f"Regulator switch timeout: {expected_regulator}"
@@ -137,7 +138,7 @@ async def switch_regulator(
         headers=headers,
     ) as resp:
         text = await resp.text()
-        print("switch response:", text.strip()[:200])
+        # print("switch response:", text.strip()[:200])
 
         if resp.status != 200:
             raise RuntimeError(f"switch regulator failed: HTTP {resp.status}")
@@ -172,7 +173,7 @@ async def post_json_with_retry(
                 if resp.status in RETRY_STATUS:
                     last_error = f"HTTP {resp.status}: {text[:300]}"
                     await asyncio.sleep(base_sleep * attempt)
-                    continue # 若偵測到該錯誤狀態竟
+                    continue # 若偵測到該錯誤狀態直接跳出
 
                 if resp.status != 200:
                     raise RuntimeError(
@@ -222,7 +223,7 @@ async def fetch_one_page(
         total_key = job.get("total_key", "total")
         rows = result.get(rows_key, [])
         total = result.get(total_key, 0)
-        print(f"{job['name']} page {page_no} 完成，筆數：{len(rows)}")
+        # print(f"{job['name']} page {page_no} 完成，筆數：{len(rows)}")
 
         return {
             "page_no": page_no,
@@ -235,7 +236,7 @@ async def fetch_job(
     session: aiohttp.ClientSession,
     job: dict,
 ):
-    print(f"目前執行 job：{job['name']}")
+    # print(f"目前執行 job：{job['name']}")
     limit = job.get("limit", 100)
     page_concurrency = job.get("page_concurrency", 10)
 
@@ -252,7 +253,7 @@ async def fetch_job(
     total    = first_page["total"]
     all_rows = first_page["rows"]
     total_pages = 1 if total == 0 or not all_rows else math.ceil(total / limit)
-    print(f"{job['name']} 總筆數：{total}，總頁數：{total_pages}")
+    # print(f"{job['name']} 總筆數：{total}，總頁數：{total_pages}")
 
     if total_pages > 1:
         tasks = [
@@ -273,7 +274,7 @@ async def fetch_job(
             all_rows.extend(item["rows"])
 
     df = pd.DataFrame(all_rows)
-    print(f"已成功爬出：{job['name']}，筆數：{len(df)}")
+    # print(f"已成功爬出：{job['name']}，筆數：{len(df)}")
 
     return df
 
@@ -296,7 +297,7 @@ async def run_admin_jobs(
     ) as session:
 
         for brand in BRANDS:
-            print(f"\n===== {brand} =====")
+            # print(f"\n===== {brand} =====")
 
             await switch_regulator(session, brand)
 
@@ -321,5 +322,5 @@ async def run_admin_jobs(
                 ignore_index=True,
             )
 
-    print("全部完成 ✅")
+    # print("全部完成 ✅")
     return all_results

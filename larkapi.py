@@ -1,7 +1,6 @@
 import requests
 
 class LarkSheetClient:
-
     BASE_URL = "https://open.larksuite.com/open-apis"
 
     def __init__(
@@ -11,10 +10,8 @@ class LarkSheetClient:
         logger
     ):
         self.logger = logger
-
         self.app_id = app_id
         self.app_secret = app_secret
-
         self.access_token = self._get_access_token()
 
         self.session = requests.Session()
@@ -25,10 +22,11 @@ class LarkSheetClient:
 
         self.logger.info("LarkSheetClient initialized successfully")
 
+
+
     def _get_access_token(self):
 
         self.logger.info("Requesting Lark Access Token")
-
         url = (
             f"{self.BASE_URL}"
             "/auth/v3/app_access_token/internal"
@@ -40,12 +38,12 @@ class LarkSheetClient:
         }
 
         resp = requests.post(url, json=payload)
-
         resp.raise_for_status()
-
         self.logger.info("Lark Access Token acquired")
 
         return resp.json()["tenant_access_token"]
+
+
 
     def query_sheet(
         self,
@@ -61,25 +59,16 @@ class LarkSheetClient:
                 f"Query sheet started "
                 f"(sheet_id={sheet_id})"
             )
-            resp = self.session.get(
-                url,
-                params={
-                    "ranges": sheet_id,
-                    "valueRenderOption": "ToString",
-                    "dateTimeRenderOption": "FormattedString"
-                }
-            )
+            resp = self.session.get(url ,params={
+                                            "ranges": sheet_id,
+                                            "valueRenderOption": "ToString",
+                                            "dateTimeRenderOption": "FormattedString"
+                                        }
+                                    )
 
             resp.raise_for_status()
-
             data = resp.json()
-
-            values = (
-                data
-                .get("data", {})
-                .get("valueRanges", [{}])[0]
-                .get("values", [])
-            )
+            values = (data.get("data", {}).get("valueRanges", [{}])[0].get("values", []))
 
             self.logger.info(
                 f"Query sheet success "
@@ -93,6 +82,59 @@ class LarkSheetClient:
                 f"(sheet_id={sheet_id})"
             )
             raise
+    
+    
+    
+    def add_sheet(
+        self,
+        spreadsheet_token: str,
+        sheet_id: str,
+        length: int,
+        major_dimension: str = "ROWS"
+    ):
+        try:
+            url = (
+                f"{self.BASE_URL}"
+                f"/sheets/v2/spreadsheets/{spreadsheet_token}/dimension_range"
+            )
+            self.logger.info(
+                f"Add dimension started "
+                f"(sheet_id={sheet_id}, "
+                f"dimension={major_dimension}, "
+                f"length={length})"
+            )
+            
+            payload = {
+                "dimension": {
+                    "sheetId": sheet_id,
+                    "majorDimension": major_dimension,
+                    "length": length
+                }
+            }
+            
+            resp = self.session.post(url, json=payload)
+
+            resp.raise_for_status()
+            data = resp.json()
+            if data.get("code") != 0:
+                raise Exception(data.get("msg"))
+
+            add_count = data.get("data", {}).get("addCount", 0)
+
+            self.logger.info(
+                f"Add dimension success "
+                f"(sheet_id={sheet_id}, added={add_count})"
+            )
+
+            return add_count
+        
+        except Exception:
+            self.logger.exception(
+                f"Add dimension failed "
+                f"(sheet_id={sheet_id})"
+            )
+            raise
+
 
 
     def append_sheet(
@@ -122,7 +164,6 @@ class LarkSheetClient:
             )
             def col_to_letter(n):
                 result = ""
-
                 while n > 0:
                     n, rem = divmod(n - 1, 26)
                     result = chr(65 + rem) + result
@@ -143,11 +184,7 @@ class LarkSheetClient:
                 }
             }
 
-            resp = self.session.post(
-                append_url,
-                json=payload
-            )
-
+            resp = self.session.post(append_url, json=payload)
             data = resp.json()
 
             if resp.status_code != 200:
@@ -163,32 +200,27 @@ class LarkSheetClient:
                 data["data"]["updates"]["updatedRange"]
             )
 
-            verify_resp = self.session.get(
-                query_url,
-                params={
-                    "ranges": updated_range,
-                    "valueRenderOption": "ToString",
-                    "dateTimeRenderOption": "FormattedString"
-                }
-            )
+            verify_resp = self.session.get(query_url, params={
+                                                        "ranges": updated_range,
+                                                        "valueRenderOption": "ToString",
+                                                        "dateTimeRenderOption": "FormattedString"
+                                                    }
+                                                )
 
             verify_data = verify_resp.json()
             self.logger.info(
                 f"Append success "
                 f"(sheet_id={sheet_id})"
             )
-            return (
-                verify_data
-                .get("data", {})
-                .get("valueRanges", [{}])[0]
-                .get("values", [])
-            )
+            return (verify_data.get("data", {}).get("valueRanges", [{}])[0].get("values", []))
+        
         except Exception:
             self.logger.exception(
                 f"Append failed "
                 f"(sheet_id={sheet_id})"
             )
             raise
+
 
     def delete_sheet(
         self,
@@ -223,11 +255,7 @@ class LarkSheetClient:
                 }
             }
 
-            resp = self.session.delete(
-                url,
-                json=payload
-            )
-
+            resp = self.session.delete(url, json=payload)
             data = resp.json()
 
             if data.get("code") != 0:
@@ -240,12 +268,14 @@ class LarkSheetClient:
                 f"(sheet_id={sheet_id}, deleted={del_count})"
             )
             return del_count 
+        
         except Exception:
             self.logger.exception(
                 f"Delete failed "
                 f"(sheet_id={sheet_id})"
             )
             raise
+
 
     def close(self):
         self.session.close()
@@ -276,4 +306,4 @@ def raise_validation_error(
         row=1
     )
 
-    raise ValueError(error_message)
+    # raise ValueError(error_message)
