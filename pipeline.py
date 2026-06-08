@@ -30,6 +30,7 @@ def run_account_pipeline(logger, client, sheet_token, input_id, output_id, recor
             logger.info("Output sheet has been successfully reset.")
     else:
         logger.info("No existing records found in the output sheet.")
+        
     logger.info("Output sheet validation completed.")   
         
         
@@ -48,10 +49,10 @@ def run_account_pipeline(logger, client, sheet_token, input_id, output_id, recor
     logger.info(f"Validation result: " f"requestor_ok={requestor_ok}, " f"data_ok={data_ok}")
 
     err_comparisionTime = datetime.now(ZoneInfo("Asia/Taipei")).strftime("%Y-%m-%d %H:%M:%S")
-    if not requestor_ok and not data_ok: # Flase + False
+    if not requestor_ok and not data_ok:   # Flase + False
         error_message = "Input validation failed: 'Requestor' 欄位未填寫，且未提供任何'Account' 或 'UserId' 查詢資料。"
         logger.error("Input validation failed. " "Missing Requestor and query data.")
-        raise "both od parameters are empty,and no mission running."
+        raise ValueError("both od parameters are empty,and no mission running.")
         
     elif not requestor_ok:                 # Flase + True
         error_message = "Input validation failed: 'Requestor' 欄位為必填欄位。"
@@ -113,7 +114,7 @@ def run_account_pipeline(logger, client, sheet_token, input_id, output_id, recor
     export_columns = [
         "Requestor","user_id","ownerAlias","owner" ,"mt4_account" ,"server" ,"accountMT4Type_display","group",
         "countryCode","currency","balance","profit","margin","marginLevel","equity","credit",
-        "leverage","enableReadonly","regulator","approvedTime","updateTime","comparisionTime"]
+        "leverage","enableReadonly","regulator","approvedTime","updateTime","comparisionTime","empty_jobs"]
 
     TradingAccount_Result = (
         pd.concat(
@@ -124,7 +125,7 @@ def run_account_pipeline(logger, client, sheet_token, input_id, output_id, recor
             ignore_index=True,
         ).assign(
             Requestor       = requestor,
-            server          = lambda x: x["dataSource"].apply(lambda d: d["name"]),
+            server          = lambda x: x["dataSource"].apply(lambda d: d.get("name") if isinstance(d, dict) else None),
             countryCode     = lambda x: x["countryCode"].astype(str).map(country_map),
             enableReadonly  = lambda x: x["enableReadonly"].astype(str).map(enable_map),
             comparisionTime = suc_comparisionTime,
@@ -137,10 +138,10 @@ def run_account_pipeline(logger, client, sheet_token, input_id, output_id, recor
     ### step5 : Upload the processed data and execution logs. -> output_id, input_id ,reocrd_id 
     logger.extra["stage"] ,logger.extra["uid"] = f"upload_lark" ,uid
     logger.info(f"Starting data upload to Lark. " f"target_rows={len(TradingAccount_Result)}")
-
-    result = TradingAccount_Result
-    df_ouput  =  (result[export_columns].fillna("").astype(str).values.tolist())
-    df_record = transformer_df(df=result ,requestor=requestor ,comparison_time=suc_comparisionTime ,return_message="Success")
+    
+    selected_df = TradingAccount_Result.loc[:, export_columns]
+    df_ouput  =  (selected_df.drop(columns=["empty_jobs"]).fillna("").astype(str).values.tolist())
+    df_record = transformer_df(df=selected_df ,requestor=requestor ,comparison_time=suc_comparisionTime ,return_message="Success")
 
     client.append_sheet(spreadsheet_token=sheet_token ,sheet_id= output_id ,datas = df_ouput ,row=1)
     logger.info("Output data uploaded successfully.")

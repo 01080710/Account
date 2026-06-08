@@ -1,3 +1,4 @@
+from pathlib import Path
 import hashlib 
 import pyotp 
 import aiohttp 
@@ -93,11 +94,13 @@ def load_env_file(path):
     return env
 
 
-credentials = load_env_file(r"/run/secrets/credentials.env")
+
+is_docker = (Path("/.dockerenv").exists() or Path("/run/.containerenv").exists())
+credentials = load_env_file(r"/run/secrets/credentials.env" if is_docker else r"C:/Users/peter.chang/credentials.env")
 async def get_cookies_async():
     return await login_and_get_token(
-        account  = credentials.get('crm_account',''),
-        password = credentials.get('crm_password',''),
-        setup_key= credentials.get('crm_setup_key','')
+        account  = credentials.get('crm_account1',''),
+        password = credentials.get('crm_password1',''),
+        setup_key= credentials.get('crm_setup_key1','')
     )
 

@@ -2,8 +2,8 @@ import pandas as pd
 
 def transformer_df(df: pd.DataFrame ,requestor:str, comparison_time: str ,return_message: str) :
 
-    manual_seconds_per_account = 20   # 假設人工處理一個帳戶平均需要 20 秒
-    hourly_cost = 200                 # 假設每小時人力成本 500 元
+    manual_seconds_per_account = 45   # 假設人工處理一個帳戶平均需要 45 秒
+    hourly_cost = 400                 # 假設每小時人力成本 400 元
     total_accounts = len(df)
     total_users = df["user_id"].nunique()
     total_users_list  = (df["user_id"].dropna().astype(str).unique().tolist())
@@ -52,7 +52,13 @@ def transformer_df(df: pd.DataFrame ,requestor:str, comparison_time: str ,return
         "manual_seconds_per_account": manual_seconds_per_account,
         "estimated_hours_saved": estimated_hours_saved,
         "estimated_twd_saved": estimated_value_twd,
-        "return_msg" : return_message,
+        "return_message" : (
+            f"Success | "
+            f"{total_users} users | "
+            f"{total_accounts} accounts validated | "
+            f"{countries_covered} countries | "
+            f"{estimated_hours_saved} hrs saved"
+        )
     }])
 
     return summary_df.fillna("").astype(str).values.tolist()
