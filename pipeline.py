@@ -101,7 +101,7 @@ def run_account_pipeline(logger, client, sheet_token, input_id, output_id, recor
     logger.info("Crawler execution started.")
     url_map ,country_map ,enable_map  = mapping.url_map ,mapping.country_map ,mapping.enable_map
     jobs = payload_type(Ids ,report_type=url_map[Account] ,column_type=column) 
-    result = asyncio.run(run_admin_jobs(BRANDS = ["VFSC" ,"VFSC2"], jobs = jobs ,logger=logger))
+    result = asyncio.run(run_admin_jobs(BRANDS = ["FCA" ,"ASIC" ,"VFSC" ,"VFSC2"], jobs = jobs ,logger=logger)) # Full Scaning 
     logger.info(f"Crawler execution completed. " f"result_counts={len(result) if result else None}")
 
 
@@ -114,22 +114,24 @@ def run_account_pipeline(logger, client, sheet_token, input_id, output_id, recor
     export_columns = [
         "Requestor","user_id","ownerAlias","owner" ,"mt4_account" ,"server" ,"accountMT4Type_display","group",
         "countryCode","currency","balance","profit","margin","marginLevel","equity","credit",
-        "leverage","enableReadonly","regulator","approvedTime","updateTime","comparisionTime","empty_jobs"]
+        "leverage","enableReadonly","isArchive","regulator","approvedTime","updateTime","comparisionTime","empty_jobs"]
 
     TradingAccount_Result = (
         pd.concat(
             [
                 df.assign(regulator=regulator)
                 for regulator, df in result['data'].items()
+                if not df.empty
             ],
             ignore_index=True,
         ).assign(
             Requestor       = requestor,
             server          = lambda x: x["dataSource"].apply(lambda d: d.get("name") if isinstance(d, dict) else None),
             countryCode     = lambda x: x["countryCode"].astype(str).map(country_map),
-            enableReadonly  = lambda x: x["enableReadonly"].astype(str).map(enable_map),
+            enableReadonly  = lambda x: (x["enableReadonly"].apply(lambda v: "O" if pd.notna(v) and float(v) == 0 else ("X" if pd.notna(v) and float(v) == 1 else v))),
             comparisionTime = suc_comparisionTime,
-            empty_jobs      = lambda x: [result["empty_jobs"]] * len(x))
+            empty_jobs      = lambda x: [result["empty_jobs"]] * len(x),
+            isArchive       = lambda x: x['isArchive'].apply(lambda v: 'Archive' if v == 1 else 'Normal'))
     )
     logger.info(f"Data transformation completed. " f"output_rows={len(TradingAccount_Result)}")
 

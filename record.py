@@ -53,7 +53,7 @@ def transformer_df(df: pd.DataFrame ,requestor:str, comparison_time: str ,return
         "estimated_hours_saved": estimated_hours_saved,
         "estimated_twd_saved": estimated_value_twd,
         "return_message" : (
-            f"Success | "
+            f"{return_message} | "
             f"{total_users} users | "
             f"{total_accounts} accounts validated | "
             f"{countries_covered} countries | "

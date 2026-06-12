@@ -3,7 +3,6 @@ def payload_type(search_values: list,
                  column_type: str = "UserId"):
     
     from copy import deepcopy
-    
     ACCOUNT_PAYLOAD  = {
         'skipCount': False,
         'pagination': {'limit': 100,'pageNo': 1,'offset': 0},
@@ -29,7 +28,7 @@ def payload_type(search_values: list,
             'tb_user_extends.webSource': {'filterType': 'SELECT','input': None},
             'depositStatus': {'filterType': 'SELECT','input': ''},
             'labelType': {'filterType': 'SELECT','input': None},
-            'is_archive': {'filterType': 'SELECT','input': '0'},
+            'is_archive': {'filterType': 'SELECT','input': ''},  # Account Activity => Normal = '0' ; Archieve = '1,2' ; Full = ''
             'markUserType': {'filterType': 'SELECT','input': ''},
             'directLevel': {'filterType': 'CUSTOM','input': '5'},
             'user_id': {'filterType': 'CUSTOM','input': ''},

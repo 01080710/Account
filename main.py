@@ -6,7 +6,6 @@ import uuid
 
 
 
-
 uid = str(uuid.uuid4())
 app_id , app_secret = "cli_a86751faa8f9d029" ,"TjZ5cprV3v3Y6Afj3UcZtea1qayrzpVn"
 sheet_token ,input_id ,output_id, record_id = "HtYXsSuG5hyTNBtrnLsl8boTgBc" ,"e04894" ,"uSQERs" ,"UxZYN9" # production

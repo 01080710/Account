@@ -12,7 +12,7 @@ services:
       - ./logs:/var/log
       - ./crontab.txt:/etc/cron.d/my-cron
     command: >
-      sh -c "touch /var/log/cron.log &&
+      sh -c "touch /var/log/cron.log &
              chmod 0644 /etc/cron.d/my-cron &&
              /usr/bin/crontab /etc/cron.d/my-cron &&
              /usr/sbin/cron -f"

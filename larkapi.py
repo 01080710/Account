@@ -76,6 +76,7 @@ class LarkSheetClient:
             )
 
             return values
+        
         except Exception as e:
             self.logger.exception(
                 f"Query sheet failed "
@@ -293,7 +294,7 @@ def raise_validation_error(
         f"Validation Error: {error_message}"
     )
     row_data = (
-        [requestor]
+          [requestor]
         + [comparison_time]
         + ["-"] * 17
         + [error_message]

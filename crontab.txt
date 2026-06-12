@@ -4,7 +4,7 @@ TZ=Asia/Taipei
 
 ##### XX:30執行自動推送腳本(必須要有使用者、檔案路徑、執行程式路徑) > schedule rule (分,時,日,月,星期)
 #30 0-7,10-14,17-23 * * * root /bin/bash -c '/usr/local/bin/python3 /app/main.py >> /var/log/$(date +\%Y\%m\%d).log 2>&1' # cooperater with QC department.
-*/10 * * * * root /bin/bash -c '/usr/local/bin/python3 /app/main.py >> /var/log/$(date +\%Y\%m\%d).log 2>&1'
+*/5 * * * * root /bin/bash -c '/usr/local/bin/python3 /app/main.py >> /var/log/$(date +\%Y\%m\%d).log 2>&1'
 
 
 
